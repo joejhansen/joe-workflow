@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, moment } from 'obsidian';
+import { App, Editor, EditorPosition, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, moment } from 'obsidian';
 
 // Remember to rename these classes and interfaces!
 
@@ -9,16 +9,24 @@ interface MyPluginSettings {
 const DEFAULT_SETTINGS: MyPluginSettings = {
 	mySetting: 'default'
 }
-const offsetCursorBy = (editor: Editor, offsetBy: number): void => {
+const offsetCursorBy = (editor: Editor, offsetBy: EditorPosition): void => {
+	const {line, ch} = offsetBy
 	const current_pos = editor.getCursor()
-	current_pos.ch += offsetBy
+	current_pos.ch += ch
+	current_pos.line += line
+	if(current_pos.line<0){
+		current_pos.line = 0
+	}
+	if (current_pos.line>editor.lineCount()){
+		current_pos.line = editor.lineCount()
+	}
 	if (current_pos.ch < 0) {
 		current_pos.ch = 0
-		editor.setCursor(current_pos)
-	} else {
-		editor.setCursor(current_pos)
 	}
-
+	if (current_pos.ch>editor.getLine(current_pos.line).length){
+		current_pos.ch = editor.getLine(current_pos.line).length
+	}
+	editor.setCursor(current_pos)
 }
 export class NumberInputModal extends Modal {
 	result: string;
@@ -47,7 +55,7 @@ export class NumberInputModal extends Modal {
 					.setButtonText("Submit")
 					.setCta()
 					.onClick(() => {
-						let num_regex = /\d/;
+						let num_regex = /^\d+$/;
 						switch (num_regex.test(this.result)) {
 							case true:
 								this.close();
@@ -142,7 +150,7 @@ export default class MyPlugin extends Plugin {
 					date_string,
 					editor.getCursor()
 				);
-				offsetCursorBy(editor, 10);
+				offsetCursorBy(editor, {line: 0, ch: 10});
 			},
 		});
 		this.addCommand({
@@ -156,7 +164,7 @@ export default class MyPlugin extends Plugin {
 						date_string,
 						editor.getCursor()
 					);
-					offsetCursorBy(editor, 10);
+					offsetCursorBy(editor, {line: 0, ch: 10});
 				}).open()
 
 
