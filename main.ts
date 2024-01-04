@@ -2,6 +2,24 @@ import { App, Editor, EditorPosition, MarkdownView, Modal, Notice, Plugin, Plugi
 
 // Remember to rename these classes and interfaces!
 
+// A record of topic strings, that connect to a record of incomplete task strings, which connect to a record of incomplete subtask-strings,
+//		each of which has an array of tuples whose index indicates the order on the top
+
+interface Subtask {
+	line: number,
+	notes: string[]
+}
+interface Task {
+	line: number,
+	sub_tasks: Record<string, Subtask>
+	notes: string[]
+}
+interface Topic {
+	line: number,
+	tasks: Record<string, Task>
+	notes: string[]
+}
+interface Checklist extends Record<string, Topic> { }
 interface MyPluginSettings {
 	mySetting: string;
 }
@@ -10,20 +28,20 @@ const DEFAULT_SETTINGS: MyPluginSettings = {
 	mySetting: 'default'
 }
 const offsetCursorBy = (editor: Editor, offsetBy: EditorPosition): void => {
-	const {line, ch} = offsetBy
+	const { line, ch } = offsetBy
 	const current_pos = editor.getCursor()
 	current_pos.ch += ch
 	current_pos.line += line
-	if(current_pos.line<0){
+	if (current_pos.line < 0) {
 		current_pos.line = 0
 	}
-	if (current_pos.line>editor.lineCount()){
+	if (current_pos.line > editor.lineCount()) {
 		current_pos.line = editor.lineCount()
 	}
 	if (current_pos.ch < 0) {
 		current_pos.ch = 0
 	}
-	if (current_pos.ch>editor.getLine(current_pos.line).length){
+	if (current_pos.ch > editor.getLine(current_pos.line).length) {
 		current_pos.ch = editor.getLine(current_pos.line).length
 	}
 	editor.setCursor(current_pos)
@@ -62,7 +80,6 @@ export class NumberInputModal extends Modal {
 								this.onSubmit(this.result);
 								break;
 							case false:
-
 								break
 							default:
 								break;
@@ -80,7 +97,7 @@ export default class MyPlugin extends Plugin {
 	settings: MyPluginSettings;
 
 	async onload() {
-		
+
 		await this.loadSettings();
 		// This creates an icon in the left ribbon.
 		// const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
@@ -131,6 +148,78 @@ export default class MyPlugin extends Plugin {
 		// 	}
 		// });
 		this.addCommand({
+			//this turned out to be more work than I thought
+			id: "roll-over-last-date's-incomplete-tasks",
+			name: "Roll over last date's incomplete tasks",
+			editorCallback: (editor: Editor) => {
+				const current_pos = editor.getCursor();
+				// assume we start left of the first date character
+				const date_regex = new RegExp(/^\d{4}-\d{2}-\d{2}$/)
+				const last_date_line: number = (function (): number {
+					for (let i = current_pos.line; i < 0; i--) {
+						if (date_regex.test(editor.getLine(i))) {
+							return i
+						} else {
+							continue
+						}
+					}
+					return 0
+				})();
+				let example_topic_lines: Checklist = {
+					health: {
+						notes: [],
+						line: 5,
+						tasks: {
+							contact_doctor: {
+								line: 8,
+								sub_tasks: {},
+								notes: [],
+							}
+						}
+					},
+					
+				}
+				let checklist: Checklist = {};
+				const topic_regex = new RegExp(/^\t(\w+\s?)+/) // TODO: change \s tags to " *" tags (without the quote_marks)
+				const topic_note_regex = new RegExp(/^\t\t\s*(\w+\s?)+/)
+				const incomplete_task_regex = new RegExp(/^\t\t-\s\[\s\]\s*(\w+\s?)+/)
+				const task_indent_regex = new RegExp(/^\t\t[^\t][\s\S]*/)
+				const incomplete_subtask_regex = new RegExp(/^\t\t\t-\s\[\s\]\s*(\w+\s?)+/)
+				const subtask_indent_regex = new RegExp(/^\t\t\t[^\t][\s\S]*/)
+				// finds the first topic down a line
+				for (let i = last_date_line + 1; i < current_pos.line; i++) {
+					let current_topic = editor.getLine(i)
+					if (topic_regex.test(current_topic)) {
+						const cleaned_topic = current_topic.replace(`\t`, ``);
+						checklist[cleaned_topic] = { line: i, tasks: {}, notes: [] };
+						// finds each task in a topic
+						for (let j = i + 1; j < current_pos.line; i++) {
+							let current_task = editor.getLine(j)
+							if (topic_regex.test(current_task)) break
+							if (topic_note_regex.test(current_task)) {
+								checklist[cleaned_topic].notes.push()
+							}
+							if (incomplete_task_regex.test(current_task)) {
+								const cleaned_task = current_task.replace(`\t`, ``)
+								checklist[cleaned_topic].tasks[current_task] = { line: j, sub_tasks: {}, notes: [] };
+								// finds each sub-task in a task
+								for (let k = j+1; j< current_pos.line; k++){
+									let current_subtask = editor.getLine(k);
+									if(topic_regex.test(current_subtask || task))
+								}
+							}
+						}
+					}
+				}
+
+				// get each un-checked sub-line for each topic
+				editor.replaceRange(
+					"❌",
+					editor.getCursor()
+				);
+			},
+		});
+		this.addCommand({
 			id: "insert-red-x",
 			name: "Insert red X",
 			editorCallback: (editor: Editor) => {
@@ -150,7 +239,7 @@ export default class MyPlugin extends Plugin {
 					date_string,
 					editor.getCursor()
 				);
-				offsetCursorBy(editor, {line: 0, ch: 10});
+				offsetCursorBy(editor, { line: 0, ch: 10 });
 			},
 		});
 		this.addCommand({
@@ -164,10 +253,8 @@ export default class MyPlugin extends Plugin {
 						date_string,
 						editor.getCursor()
 					);
-					offsetCursorBy(editor, {line: 0, ch: 10});
+					offsetCursorBy(editor, { line: 0, ch: 10 });
 				}).open()
-
-
 			},
 		});
 
