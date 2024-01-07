@@ -49,34 +49,8 @@ const checklist_into_hashmap = (current_pos: EditorPosition, editor: Editor): Ch
 	}
 	//
 	let checklist: Checklist = {};
-	let topics: [number, number][] = checklist_indents.filter((value) => { value[1] == 1 })
-	for (let [current_index, current_topic] of topics.entries()) {
-		let [topic_line_num, topic_indent] = current_topic
-		checklist[editor.getLine(topic_line_num).replace(`\t`, ``)] = { line: topic_line_num, notes: [], tasks: {} }
-		let next_topic_line = (function (): number {
-			if (topics[current_index + 1]) {
-				return topics[current_index + 1][0]
-			} else {
-				return next_dateline // see, we used it again
-			}
-		})()
-		for (let i = topic_line_num; i < next_topic_line; i++) {
-
-		}
-		// like this
-		interface RecursiveObject {
-			[key: string]: string | RecursiveObject
-		}
-		let words = ["this", "is", "an", "object"]
-		let some_object: RecursiveObject = {}
-		let current_object: RecursiveObject = {}
-		for (let [index, word] of words.entries()) {
-			current_object = some_object;
-			current_object[word] = word;
-			some_object = current_object;
-		}
-		console.log(JSON.stringify(some_object))
-	};
+	
+	
 
 	return checklist
 }
