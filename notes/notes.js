@@ -1,6 +1,5 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var fs = require("fs");
 var checklist_indents = []; //the index is the relative line, 
 var makeChecklistObject = function (levels) {
     var someChecklist = {};
@@ -41,6 +40,19 @@ var makeChecklistFromIndents = function (indentList) {
     }
     return someChecklist;
 };
+var getChecklistItemFromContext = function (context, currentChecklist) {
+    var _a;
+    var first = context[0], rest = context.slice(1);
+    if (!currentChecklist[first]) {
+        return {};
+    }
+    if (!rest.length) {
+        return _a = {}, _a[first] = currentChecklist[first], _a;
+    }
+    else {
+        return getChecklistItemFromContext(rest, currentChecklist[first].tasks);
+    }
+};
 var simpleList = [
     { indents: 1, isChecklist: false, line: 1, value: "this is a topic" },
     { indents: 2, isChecklist: true, line: 2, value: "this is a checklist" },
@@ -61,9 +73,23 @@ var complicatedList = [
     { indents: 4, isChecklist: false, line: 7, value: "even more notes!" },
     { indents: 1, isChecklist: false, line: 8, value: "and finally, a topic" },
 ];
-var recursiveChecklist = makeChecklistFromIndents(complicatedList);
+// let recursiveChecklist: Checklist = makeChecklistFromIndents(complicatedList)
+var findThisList = [
+    { indents: 1, isChecklist: false, line: 1, value: "find" },
+    { indents: 2, isChecklist: false, line: 1, value: "this" },
+    { indents: 3, isChecklist: false, line: 1, value: "deeply" },
+    { indents: 4, isChecklist: false, line: 1, value: "nested" },
+    { indents: 5, isChecklist: false, line: 1, value: "entry" },
+    { indents: 4, isChecklist: false, line: 1, value: "woot" },
+    { indents: 3, isChecklist: false, line: 1, value: "but not this one" },
+    { indents: 2, isChecklist: false, line: 1, value: "not this" },
+];
+var context = ["find", "this", "deeply", "nested", "entry"];
 var currTime = Date.now();
-fs.writeFileSync("checklistOutput-".concat(currTime, ".json"), JSON.stringify(recursiveChecklist));
+var findChecklist = makeChecklistFromIndents(findThisList);
+var thisEntry = getChecklistItemFromContext(context, findChecklist);
+console.log(JSON.stringify(thisEntry, null, 2));
+// fs.writeFileSync(`checklistOutput-${currTime}.json`, JSON.stringify(recursiveChecklist))
 function insertIntoChain(checklist_indents) {
     var _a;
     if (!checklist_indents.length) {
