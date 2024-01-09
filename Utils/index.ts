@@ -1,85 +1,6 @@
-import { Checklist, Entry, EntryList, Indent, LineInfo, NestedRecord, MyPluginSettings, Topic } from "Types"
+import { Checklist, Entry, Indent } from "Types"
 import { Editor, EditorPosition } from "obsidian"
 
-export const checklist_into_hashmap = (current_pos: EditorPosition, editor: Editor): Checklist => {
-    // look for the next \n
-    const newline_regex = new RegExp(/\n/)
-    let next_dateline = (function (): number {
-        for (let i = current_pos.line; i <= editor.lineCount(); i++) {
-            if (newline_regex.test(editor.getLine(i))) {
-                return i
-            }
-        }
-        return editor.lineCount()
-    })()
-    // categorize each line
-    // index is line # relative to the list
-    let checklist_indents: [number, number][] = [];
-    for (let i = current_pos.line; i <= next_dateline; i++) {
-        let current_line = editor.getLine(current_pos.line);
-        let indent_num = 0;
-        while ("\t" == current_line[0]) { // weird
-            indent_num += 1;
-            current_line = current_line.slice(1)
-        }
-        checklist_indents.push([i, indent_num])
-    }
-    //
-    let checklist: Checklist = {};
-
-
-
-    return checklist
-}
-// export const incomplete_checklist_into_hashmap = (last_date_line: number, current_pos: EditorPosition, editor: Editor): Checklist => {
-// 	let checklist: Checklist = {};
-// 	const topic_regex = new RegExp(/^\t(\w+\s?)+/) // TODO: change \s tags to " *" tags (without the quote_marks)
-// 	const topic_note_regex = new RegExp(/^\t\t\s*(\w+\s?)+/)
-// 	const incomplete_task_regex = new RegExp(/^\t\t-\s\[\s\]\s*(\w+\s?)+/)
-// 	const task_indent_regex = new RegExp(/^\t\t[^\t][\s\S]*/)
-// 	const incomplete_subtask_regex = new RegExp(/^\t\t\t-\s\[\s\]\s*(\w+\s?)+/)
-// 	const subtask_indent_regex = new RegExp(/^\t\t\t[^\t][\s\S]*/)
-// 	// finds the first topic down a line
-// 	// maybe i'm thinking about this wrong
-// 	// i already have the tablature in the character index of the last starting \t
-// 	// i could assign each line a tuple value of [the_line_#, the_indent_#]
-// 	// if the next line is further indented than the current one
-// 	// 		that means it's a note referencing the current line
-// 	// inversely, if the next line is less indented that the current one
-// 	// 		we assume the current note is finished and go up as many levels as needed
-// 	// I would just have to keep track of what the current note or "topic" is through an array or something that equates index to indent depth
-// 	// Date: 0 indent
-// 	// 		Topic: 1
-// 	// 			Task: 2
-// 	// 				Subtask: 3
-// 	//					AndSoOn: 4
-// 	for (let i = last_date_line + 1; i < current_pos.line; i++) {
-// 		let current_topic = editor.getLine(i)
-// 		if (topic_regex.test(current_topic)) {
-// 			const cleaned_topic = current_topic.replace(`\t`, ``);
-// 			checklist[cleaned_topic] = { line: i, tasks: {}, notes: [] };
-// 			// finds each task in a topic
-// 			for (let j = i + 1; j < current_pos.line; i++) {
-// 				let current_task = editor.getLine(j)
-// 				if (topic_regex.test(current_task)) break
-// 				if (topic_note_regex.test(current_task)) {
-// 					checklist[cleaned_topic].notes.push()
-// 				}
-// 				if (incomplete_task_regex.test(current_task)) {
-// 					const cleaned_task = current_task.replace(`\t`, ``)
-// 					checklist[cleaned_topic].tasks[current_task] = { line: j, sub_tasks: {}, notes: [] };
-// 					// finds each sub-task in a task
-// 					for (let k = j + 1; j < current_pos.line; k++) {
-// 						let current_subtask = editor.getLine(k);
-// 						if (topic_regex.test(current_subtask)) { }
-// 						// TODO: this
-// 					}
-// 				}
-// 			}
-// 		}
-// 	}
-// 	return checklist
-// }
 export const offsetCursorBy = (editor: Editor, offsetBy: EditorPosition): void => {
     const { line, ch } = offsetBy
     const current_pos = editor.getCursor()
@@ -177,17 +98,6 @@ export const insertIntoChain = (checklist_indents: { value: string, line: number
         }
     }
 }
-export const makeChecklistObject = (levels: EntryList[]): Checklist => { // I did it
-    let someChecklist: Checklist = {}
-    for (let entry of levels) {
-        if (entry.subEntries.length) {
-            someChecklist[entry.value] = { notes: [], isChecklist: entry.isChecklist, tasks: makeChecklistObject(entry.subEntries) }
-        } else {
-            someChecklist[entry.value] = { notes: [], isChecklist: entry.isChecklist, tasks: {} }
-        }
-    }
-    return someChecklist
-}
 export const getChecklistEntryFromContext = (context: string[], currentChecklist: Record<string, Entry>): Record<string, Entry> => {
     let [first, ...rest] = context
     if (!currentChecklist[first]) {
@@ -247,7 +157,6 @@ export const makeIndentListFromEditorRange = (anchors: { start: number, end: num
     }
     return someIndentList
 }
-
 export const mergeChecklists = (modifyThis: Checklist, modifyWith: Checklist): Checklist => {
     for (let key of Object.keys(modifyWith)) {
         if (!modifyThis[key]) {
