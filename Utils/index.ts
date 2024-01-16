@@ -48,7 +48,7 @@ export const makeLowercaseString = (someString: string): string => {
     }
     return stringToCap
 }
-export const doSomethingWithSelection = (editor: Editor, someFunction: (selection: string) => string) => {
+export const doSomethingWithSelection = (editor: Editor, someFunction: (selection: string) => string): void => {
     const selection = editor.getSelection()
     const currentPos = editor.getCursor() // snapshot before replaceSelection moves cursor to the end of the selection regardless
     editor.replaceSelection(someFunction(selection))
@@ -72,31 +72,18 @@ export const makeChecklistFromIndents = (indentList: Indent[]): Checklist => {
         }
         if (currentLevel.indents == indentList[i].indents) {
             if (!nextToRest.length || !indentList[i + 1]) { // we have to check both, or else you might index indentList out-of-bounds in the next statement
-                someChecklist[indentList[i].value] = { isChecklist: indentList[i].isChecklist, notes: [], tasks: {} }
+                someChecklist[indentList[i].value] = { isChecklist: indentList[i].isChecklist, notes: [], tasks: {}, indents: indentList[i].indents }
             } else if (indentList[i + 1].indents < currentLevel.indents) {
-                someChecklist[indentList[i].value] = { isChecklist: indentList[i].isChecklist, notes: [], tasks: {} }
+                someChecklist[indentList[i].value] = { isChecklist: indentList[i].isChecklist, notes: [], tasks: {}, indents: indentList[i].indents }
                 break
             } else if (indentList[i + 1].indents == currentLevel.indents) {
-                someChecklist[indentList[i].value] = { isChecklist: indentList[i].isChecklist, notes: [], tasks: {} }
+                someChecklist[indentList[i].value] = { isChecklist: indentList[i].isChecklist, notes: [], tasks: {}, indents: indentList[i].indents }
             } else {
-                someChecklist[indentList[i].value] = { isChecklist: indentList[i].isChecklist, notes: [], tasks: makeChecklistFromIndents(indentList.slice(i + 1)) }
+                someChecklist[indentList[i].value] = { isChecklist: indentList[i].isChecklist, notes: [], tasks: makeChecklistFromIndents(indentList.slice(i + 1)), indents: indentList[i].indents }
             }
         }
     }
     return someChecklist
-}
-export const insertIntoChain = (checklist_indents: { value: string, line: number, notes: string[] }[]): Record<string, Entry> => {
-    if (!checklist_indents.length) {
-        return {}
-    }
-    let [first, ...rest] = checklist_indents
-    return {
-        [first.value]: {
-            tasks: insertIntoChain(rest),
-            notes: first.notes,
-            isChecklist: false,
-        }
-    }
 }
 export const getChecklistEntryFromContext = (context: string[], currentChecklist: Record<string, Entry>): Record<string, Entry> => {
     let [first, ...rest] = context
@@ -116,7 +103,7 @@ export const modifyChecklistEntryFromContext = (context: string[], currentCheckl
         return currentChecklist
     }
     else {
-        if (!currentChecklist[first]) currentChecklist[first] = { isChecklist: false, notes: [], tasks: {} }
+        if (!currentChecklist[first]) currentChecklist[first] = { isChecklist: false, notes: [], tasks: {}, indents: 0 } // TODO: fix this so indents will be correct instead of 0
         currentChecklist[first].tasks = modifyChecklistEntryFromContext(rest, currentChecklist[first].tasks, modifyByThis)
         return currentChecklist
     }
@@ -163,6 +150,7 @@ export const mergeChecklists = (modifyThis: Checklist, modifyWith: Checklist): C
             modifyThis[key] = modifyWith[key]
         } else {
             modifyThis[key] = {
+                indents: modifyWith[key].indents,
                 isChecklist: (modifyThis[key].isChecklist || modifyWith[key].isChecklist),
                 notes: (function (): string[] {
                     let someNotes: string[] = [];
@@ -180,4 +168,15 @@ export const mergeChecklists = (modifyThis: Checklist, modifyWith: Checklist): C
         }
     }
     return modifyThis
+}
+export const stringifyChecklist = (someChecklist: Checklist): string => {
+    let someString = ""
+    for (let key of Object.keys(someChecklist)) {
+        let indents = ""
+        for (let i = 0; i < someChecklist[key].indents; i++) {
+            indents = indents + "\t"
+        }
+        someString = someString + indents + stringifyChecklist(someChecklist[key].tasks) + "\n"
+    }
+    return someString
 }

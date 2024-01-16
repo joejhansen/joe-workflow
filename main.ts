@@ -1,5 +1,5 @@
 import { Checklist, Indent, MyPluginSettings } from 'Types';
-import { doSomethingWithSelection, makeChecklistFromIndents, makeIndentListFromEditorRange, makeLowercaseString, makeUppercaseString, mergeChecklists, offsetCursorBy } from 'Utils';
+import { doSomethingWithSelection, makeChecklistFromIndents, makeIndentListFromEditorRange, makeLowercaseString, makeUppercaseString, mergeChecklists, offsetCursorBy, stringifyChecklist } from 'Utils';
 import { App, Editor, EditorPosition, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, moment } from 'obsidian';
 
 // Remember to rename these classes and interfaces!
@@ -67,16 +67,26 @@ export default class MyPlugin extends Plugin {
 	async onload() {
 
 		await this.loadSettings();
-		this.addCommand({
+		this.addCommand({ // Roll over last date's incomplete tasks
 			// this turned out to be more work than I thought
 			// makes a hashmap of the first checklist, then makes a hashmap of the previous date's checklist
 			// 		then merges those hashmaps together
-			//		then deletes your current checklist
 			//		then replaces that deleted checklist with the merged one
 			// How do you make a hashmap for a checklist, i hear you say?
 			// Simply ->
-			// 		Bang your head against the wall with regex
-			//			it's not that it's hard, it's that it's finnicky
+			// 		loop through each line, making a 1D array with each line's information
+			// 		feed that 1D array into a recursive function in order to make a hashmap
+			// Want to make a checklist?
+			//		recursion.
+			// Want to modify a checklist? 
+			//		recursion.
+			// Want to merge two checklists together? 
+			// 		recursion.
+			// Want to turn a checklist back into a string?
+			//		that's actually iterative -- PSYCH! RECURSION AGAIN, FOO!
+			// Was choosing to use a hashmap instead of some other structure with recurisve functions a good idea?
+			// 		Hell if I know
+			//		The syntax is a little wonky, but O(1) lookup with computed property values is nice
 			id: "roll-over-last-date's-incomplete-tasks",
 			name: "Roll over last date's incomplete tasks",
 			editorCallback: (editor: Editor) => {
@@ -110,18 +120,16 @@ export default class MyPlugin extends Plugin {
 				const currentChecklistAnchors = { start: currentPos.line, end: endOfCurrentChecklist }
 				const currentDateIndentArray: Indent[] = makeIndentListFromEditorRange(currentChecklistAnchors, editor)
 				const currentDateChecklist: Checklist = makeChecklistFromIndents(currentDateIndentArray)
-				const lastDateIndentArray: Indent[] = makeIndentListFromEditorRange(lastChecklistAnchors, editor) // make an indent[] with a makeIndentListFromEditorRange
+				const lastDateIndentArray: Indent[] = makeIndentListFromEditorRange(lastChecklistAnchors, editor)
 				const lastDateChecklist: Checklist = makeChecklistFromIndents(lastDateIndentArray)
 				const mergedChecklist: Checklist = mergeChecklists(currentDateChecklist, lastDateChecklist)
-				// okay now write it out
-				editor.replaceRange(
-					"❌",
-					editor.getCursor()
-				);
+				const stringifiedChecklist: string = stringifyChecklist(mergedChecklist);
+				editor.setSelection(currentPos, { line: endOfCurrentChecklist, ch: editor.getLine(endOfCurrentChecklist).length })
+				editor.replaceSelection(stringifiedChecklist)
 				return
 			},
 		});
-		this.addCommand({
+		this.addCommand({ // Insert red X
 			id: "insert-red-x",
 			name: "Insert red X",
 			editorCallback: (editor: Editor) => {
@@ -131,7 +139,7 @@ export default class MyPlugin extends Plugin {
 				);
 			},
 		});
-		this.addCommand({
+		this.addCommand({ // Insert tomorrow's date
 			id: "insert-tomorrow's-date",
 			name: "Insert tomorrow's date",
 			editorCallback: (editor: Editor) => {
@@ -144,7 +152,7 @@ export default class MyPlugin extends Plugin {
 				offsetCursorBy(editor, { line: 0, ch: 10 });
 			},
 		});
-		this.addCommand({
+		this.addCommand({ // Insert Nth date from today
 			id: "insert-nth-date-from-today",
 			name: "Insert Nth date from today",
 			editorCallback: (editor: Editor) => {
@@ -159,14 +167,14 @@ export default class MyPlugin extends Plugin {
 				}).open()
 			},
 		});
-		this.addCommand({
+		this.addCommand({ // Replace selection with uppercase
 			id: "replace-selection-with-uppercase",
 			name: "Replace selection with uppercase",
 			editorCallback: (editor: Editor) => {
 				doSomethingWithSelection(editor, makeUppercaseString)
 			}
 		});
-		this.addCommand({
+		this.addCommand({ // Replace selection with lowercase
 			id: "replace-selection-with-lowercase",
 			name: "Replace selection with lowercase",
 			editorCallback: (editor: Editor) => {

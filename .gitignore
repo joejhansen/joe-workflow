@@ -22,5 +22,9 @@ data.json
 .DS_Store
 
 # notes results folder
-notes/results
-notes/*.js
+Notes/results
+Notes/*.js
+
+# stuff for main
+Types/*.js
+Utils/*.js
