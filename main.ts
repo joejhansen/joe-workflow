@@ -1,5 +1,5 @@
 import { Checklist, Indent, MyPluginSettings } from 'Types';
-import { doSomethingWithSelection, makeChecklistFromIndents, makeIndentListFromEditorRange, makeLowercaseString, makeUppercaseString, mergeChecklists, offsetCursorBy, stringifyChecklist } from 'Utils';
+import { doSomethingWithSelection, getAscensionS9SpellLink, getAscensionS9TalentLink, makeChecklistFromIndents, makeIndentListFromEditorRange, makeLowercaseString, makeUppercaseString, mergeChecklists, offsetCursorBy, stringifyChecklist } from 'Utils';
 import { App, Editor, EditorPosition, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, moment } from 'obsidian';
 
 // Remember to rename these classes and interfaces!
@@ -99,14 +99,14 @@ export default class MyPlugin extends Plugin {
 				const endOfCurrentChecklist: number = (function (): number {
 					for (let i = currentPos.line + 1; i < editor.lineCount(); i++) {
 						let someLine: string = editor.getLine(i)
-						if ("\t" !== someLine.trim()[0]) {
+						if ("\t" !== someLine[0]) {
 							return i
 						}
 					}
 					return editor.lineCount();
 				})()
 				const lastDateLine: number = (function (): number {
-					for (let i = currentPos.line; i < 0; i--) {
+					for (let i = currentPos.line-1; i >= 0; i--) {
 						if (date_regex.test(editor.getLine(i))) {
 							return i
 						} else {
@@ -124,7 +124,7 @@ export default class MyPlugin extends Plugin {
 				const lastDateChecklist: Checklist = makeChecklistFromIndents(lastDateIndentArray)
 				const mergedChecklist: Checklist = mergeChecklists(currentDateChecklist, lastDateChecklist)
 				const stringifiedChecklist: string = stringifyChecklist(mergedChecklist);
-				editor.setSelection(currentPos, { line: endOfCurrentChecklist, ch: editor.getLine(endOfCurrentChecklist).length })
+				editor.setSelection({line: currentPos.line + 1, ch: 0}, { line: endOfCurrentChecklist, ch: editor.getLine(endOfCurrentChecklist).length })
 				editor.replaceSelection(stringifiedChecklist)
 				return
 			},
@@ -179,6 +179,28 @@ export default class MyPlugin extends Plugin {
 			name: "Replace selection with lowercase",
 			editorCallback: (editor: Editor) => {
 				doSomethingWithSelection(editor, makeLowercaseString)
+			}
+		});
+		this.addCommand({ // Replace selection with lowercase
+			id: "link-to-season-9-spell",
+			name: "Link to season 9 spell",
+			editorCallback: async (editor: Editor) => {
+				let someLink = await getAscensionS9SpellLink(editor.getSelection())
+				let someClosure = () => {
+					return someLink
+				}
+				doSomethingWithSelection(editor, someClosure)
+			}
+		});
+		this.addCommand({ // Replace selection with lowercase
+			id: "link-to-season-9-talent",
+			name: "Link to season 9 talent",
+			editorCallback: async (editor: Editor) => {
+				let someLink = await getAscensionS9TalentLink(editor.getSelection())
+				let someClosure = () => {
+					return someLink
+				}
+				doSomethingWithSelection(editor, someClosure)
 			}
 		});
 		// This adds a settings tab so the user can configure various aspects of the plugin

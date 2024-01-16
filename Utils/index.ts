@@ -172,11 +172,41 @@ export const mergeChecklists = (modifyThis: Checklist, modifyWith: Checklist): C
 export const stringifyChecklist = (someChecklist: Checklist): string => {
     let someString = ""
     for (let key of Object.keys(someChecklist)) {
-        let indents = ""
-        for (let i = 0; i < someChecklist[key].indents; i++) {
-            indents = indents + "\t"
-        }
-        someString = someString + indents + stringifyChecklist(someChecklist[key].tasks) + "\n"
+        someString = someString+key+"\n"+stringifyChecklist(someChecklist[key].tasks)
     }
     return someString
+}
+export const getAscensionS9TalentLink = async (someString: string): Promise<string> => {
+    try {
+        someString.trim().replace(" ", "%20")
+        let someLink: string = await fetch(`https://db.ascension.gg/?spells=410.2&filter=na=${someString}`)
+            .then(function (response) { return response.text() })
+            .then(function (html) {
+                let parser = new DOMParser();
+                let doc = parser.parseFromString(html, "text/html");
+                let linkWeWant = doc.getElementsByClassName("listview-mode-default")[0].children[1].children[0].children[1].children[1].getAttribute("href") as string
+                return `https://db.ascension.gg/${linkWeWant}`
+            })
+        return someLink
+    } catch (e) {
+        console.log(`Something fucked up\n${e}`)
+        return `https://db.ascension.gg/`
+    }
+}
+export const getAscensionS9SpellLink = async (someString: string): Promise<string> => {
+    try {
+        someString.trim().replace(" ", "%20")
+        let someLink: string = await fetch(`https://db.ascension.gg/?spells=410.2&filter=na=${someString}`)
+            .then(function (response) { return response.text() })
+            .then(function (html) {
+                let parser = new DOMParser();
+                let doc = parser.parseFromString(html, "text/html");
+                let linkWeWant = doc.getElementsByClassName("listview-mode-default")[0].children[1].children[0].children[1].children[1].getAttribute("href") as string
+                return `https://db.ascension.gg/${linkWeWant}`
+            })
+        return someLink
+    } catch (e) {
+        console.log(`Something fucked up\n${e}`)
+        return `https://db.ascension.gg/`
+    }
 }
