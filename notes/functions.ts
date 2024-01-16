@@ -70,7 +70,6 @@ export const modifyChecklistEntryFromContext = (context: string[], currentCheckl
         return currentChecklist
     }
 }
-// TODO: test this
 export const replaceChecklistEntryFromContext = (context: string[], currentChecklist: Record<string, Entry>, modifyByThis: { [key: string]: Entry }): Record<string, Entry> => {
     let [first, ...rest] = context
     if (!currentChecklist[first]) {

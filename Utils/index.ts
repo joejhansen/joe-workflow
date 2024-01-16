@@ -1,4 +1,4 @@
-import { Checklist, Entry, Indent } from "Types"
+import { Checklist, Entry, Indent } from "../Types"
 import { Editor, EditorPosition } from "obsidian"
 
 export const offsetCursorBy = (editor: Editor, offsetBy: EditorPosition): void => {
@@ -21,32 +21,10 @@ export const offsetCursorBy = (editor: Editor, offsetBy: EditorPosition): void =
     editor.setCursor(current_pos)
 }
 export const makeUppercaseString = (someString: string): string => {
-    let stringToCap = someString;
-    for (let [index, char] of someString.split('').entries()) {
-        const currentCharCode = char.charCodeAt(0)
-        if (currentCharCode < 97 || currentCharCode > 122) {
-            continue
-        } else {
-            let splitString = stringToCap.split('')
-            splitString[index] = String.fromCharCode(currentCharCode - 32);
-            stringToCap = splitString.join('')
-        }
-    }
-    return stringToCap
+    return someString.toLocaleUpperCase()
 }
 export const makeLowercaseString = (someString: string): string => {
-    let stringToCap = someString;
-    for (let [index, char] of someString.split('').entries()) {
-        const currentCharCode = char.charCodeAt(0)
-        if (currentCharCode < 65 || currentCharCode > 90) {
-            continue
-        } else {
-            let splitString = stringToCap.split('')
-            splitString[index] = String.fromCharCode(currentCharCode + 32);
-            stringToCap = splitString.join('')
-        }
-    }
-    return stringToCap
+    return someString.toLocaleLowerCase()
 }
 export const doSomethingWithSelection = (editor: Editor, someFunction: (selection: string) => string): void => {
     const selection = editor.getSelection()

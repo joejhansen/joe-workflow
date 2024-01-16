@@ -1,5 +1,5 @@
-import { Checklist, Indent, MyPluginSettings } from 'Types';
-import { doSomethingWithSelection, getAscensionS9SpellLink, getAscensionS9TalentLink, makeChecklistFromIndents, makeIndentListFromEditorRange, makeLowercaseString, makeUppercaseString, mergeChecklists, offsetCursorBy, stringifyChecklist } from 'Utils';
+import { Checklist, Indent, MyPluginSettings } from './Types';
+import { doSomethingWithSelection, getAscensionS9SpellLink, getAscensionS9TalentLink, makeChecklistFromIndents, makeIndentListFromEditorRange, makeLowercaseString, makeUppercaseString, mergeChecklists, offsetCursorBy, stringifyChecklist } from './Utils';
 import { App, Editor, EditorPosition, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, moment } from 'obsidian';
 
 // Remember to rename these classes and interfaces!
