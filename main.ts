@@ -1,5 +1,5 @@
 import { Checklist, Indent, MyPluginSettings } from './Types';
-import { doSomethingWithSelection, getAscensionS9SpellLink, getAscensionS9TalentLink, makeChecklistFromIndents, makeIndentListFromEditorRange, makeLowercaseString, makeUppercaseString, mergeChecklists, offsetCursorBy, stringifyChecklist } from './Utils';
+import { doSomethingWithSelection, getAscensionS9SpellLink, getAscensionS9TalentLink, makeChecklistFromIndents, makeIndentListFromEditorRange, makeLowercaseString, makeUppercaseString, mergeChecklists, offsetCursorBy, removeCompletedTasks, stringifyChecklist } from './Utils';
 import { App, Editor, EditorPosition, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, moment } from 'obsidian';
 
 // Remember to rename these classes and interfaces!
@@ -68,6 +68,54 @@ export default class MyPlugin extends Plugin {
 
 		await this.loadSettings();
 		this.addCommand({ // Roll over last date's incomplete tasks
+			id: "roll-over-last-date's-incomplete-tasks",
+			name: "Roll over last date's incomplete tasks",
+			editorCallback: (editor: Editor) => {
+				console.time()
+				const currentPos = editor.getCursor();
+				// assume we start left of the first date character
+				const date_regex = new RegExp(/^\d{4}-\d{2}-\d{2}$/)
+				if (!date_regex.test(editor.getLine(currentPos.line))) { //if the current line isn't a date line, return early
+					console.timeEnd()
+					return
+				}
+				const endOfCurrentChecklist: number = (function (): number {
+					for (let i = currentPos.line + 1; i < editor.lineCount(); i++) {
+						let someLine: string = editor.getLine(i)
+						if ("\t" !== someLine[0]) {
+							return i
+						}
+					}
+					return editor.lineCount();
+				})()
+				const lastDateLine: number = (function (): number {
+					for (let i = currentPos.line - 1; i >= 0; i--) {
+						if (date_regex.test(editor.getLine(i))) {
+							return i
+						} else {
+							continue
+						}
+					}
+					return -1
+				})();
+				if (lastDateLine < 0) { console.timeEnd(); return } // if there's no date line before this one, return early
+				const lastChecklistAnchors = { start: lastDateLine, end: currentPos.line - 1 }
+				const currentChecklistAnchors = { start: currentPos.line, end: endOfCurrentChecklist }
+				const currentDateIndentArray: Indent[] = makeIndentListFromEditorRange(currentChecklistAnchors, editor)
+				const currentDateChecklist: Checklist = makeChecklistFromIndents(currentDateIndentArray)
+				const lastDateIndentArray: Indent[] = makeIndentListFromEditorRange(lastChecklistAnchors, editor)
+				let lastDateChecklist: Checklist = makeChecklistFromIndents(lastDateIndentArray)
+				lastDateChecklist = removeCompletedTasks(lastDateChecklist)
+				const mergedChecklist: Checklist = mergeChecklists(currentDateChecklist, lastDateChecklist)
+				const stringifiedChecklist: string = stringifyChecklist(mergedChecklist);
+				editor.setSelection({ line: currentPos.line + 1, ch: 0 }, { line: endOfCurrentChecklist, ch: editor.getLine(endOfCurrentChecklist).length })
+				editor.replaceSelection(stringifiedChecklist)
+				editor.setCursor(currentPos)
+				console.timeEnd()
+				return
+			},
+		});
+		this.addCommand({ // Roll over last date's Checklist
 			// this turned out to be more work than I thought
 			// makes a hashmap of the first checklist, then makes a hashmap of the previous date's checklist
 			// 		then merges those hashmaps together
@@ -87,13 +135,15 @@ export default class MyPlugin extends Plugin {
 			// Was choosing to use a hashmap instead of some other structure with recurisve functions a good idea?
 			// 		Hell if I know
 			//		The syntax is a little wonky, but O(1) lookup with computed property values is nice
-			id: "roll-over-last-date's-incomplete-tasks",
-			name: "Roll over last date's incomplete tasks",
+			id: "roll-over-last-date's-checklist",
+			name: "Roll over last date's checklist",
 			editorCallback: (editor: Editor) => {
+				console.time()
 				const currentPos = editor.getCursor();
 				// assume we start left of the first date character
 				const date_regex = new RegExp(/^\d{4}-\d{2}-\d{2}$/)
 				if (!date_regex.test(editor.getLine(currentPos.line))) { //if the current line isn't a date line, return early
+					console.timeEnd()
 					return
 				}
 				const endOfCurrentChecklist: number = (function (): number {
@@ -106,7 +156,7 @@ export default class MyPlugin extends Plugin {
 					return editor.lineCount();
 				})()
 				const lastDateLine: number = (function (): number {
-					for (let i = currentPos.line-1; i >= 0; i--) {
+					for (let i = currentPos.line - 1; i >= 0; i--) {
 						if (date_regex.test(editor.getLine(i))) {
 							return i
 						} else {
@@ -115,7 +165,7 @@ export default class MyPlugin extends Plugin {
 					}
 					return -1
 				})();
-				if (lastDateLine < 0) return // if there's no date line before this one, return early
+				if (lastDateLine < 0) { console.timeEnd(); return } // if there's no date line before this one, return early
 				const lastChecklistAnchors = { start: lastDateLine, end: currentPos.line - 1 }
 				const currentChecklistAnchors = { start: currentPos.line, end: endOfCurrentChecklist }
 				const currentDateIndentArray: Indent[] = makeIndentListFromEditorRange(currentChecklistAnchors, editor)
@@ -124,8 +174,10 @@ export default class MyPlugin extends Plugin {
 				const lastDateChecklist: Checklist = makeChecklistFromIndents(lastDateIndentArray)
 				const mergedChecklist: Checklist = mergeChecklists(currentDateChecklist, lastDateChecklist)
 				const stringifiedChecklist: string = stringifyChecklist(mergedChecklist);
-				editor.setSelection({line: currentPos.line + 1, ch: 0}, { line: endOfCurrentChecklist, ch: editor.getLine(endOfCurrentChecklist).length })
+				editor.setSelection({ line: currentPos.line + 1, ch: 0 }, { line: endOfCurrentChecklist, ch: editor.getLine(endOfCurrentChecklist).length })
 				editor.replaceSelection(stringifiedChecklist)
+				editor.setCursor(currentPos)
+				console.timeEnd()
 				return
 			},
 		});
@@ -181,7 +233,8 @@ export default class MyPlugin extends Plugin {
 				doSomethingWithSelection(editor, makeLowercaseString)
 			}
 		});
-		this.addCommand({ // Replace selection with lowercase
+		// TODO: Fix cors problems
+		this.addCommand({ // Get link for Ascension S9 Spell
 			id: "link-to-season-9-spell",
 			name: "Link to season 9 spell",
 			editorCallback: async (editor: Editor) => {
@@ -192,7 +245,8 @@ export default class MyPlugin extends Plugin {
 				doSomethingWithSelection(editor, someClosure)
 			}
 		});
-		this.addCommand({ // Replace selection with lowercase
+		// TODO: Fix cors problems
+		this.addCommand({ // Get link for Ascension S9 Talent
 			id: "link-to-season-9-talent",
 			name: "Link to season 9 talent",
 			editorCallback: async (editor: Editor) => {
