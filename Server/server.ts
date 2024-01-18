@@ -6,6 +6,7 @@ import * as path from "path";
 import * as cors from "cors";
 import * as jsdom from 'jsdom'
 import * as fs from 'fs'
+import puppeteer from 'puppeteer'
 
 dotenv.config();
 const app: express.Express = express();
@@ -21,26 +22,64 @@ let corsOptions = {
     origin: "app://obsidian.md",
     optionsSuccessStatus: 200
 }
+async function fetchPageHTML(url: string): Promise<string> {
+    const browser = await puppeteer.launch(
+        // { headless: false }
+    );
+    const page = await browser.newPage();
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+    // Navigate to the page
+    await page.goto(url, { waitUntil: 'domcontentloaded' });
+
+    // Wait for JavaScript to execute (you can adjust the wait time as needed)
+    await new Promise(r => setTimeout(r, 500));
+
+    // Get the HTML content after JavaScript has executed
+    const htmlContent = await page.content();
+
+    // Close the browser
+    await browser.close();
+
+    return htmlContent;
+}
+
+// Example usage
+const url = 'https://example.com';
+// #lv-spells.children[1].children[1].children[0].children[1].children[0].children[0].getAttribute("href")
 app.get("/AscensionS9Talent/:talent", cors(corsOptions), async (req, res) => {
-    let someString = req.body.searchThis
+    let someString = req.params.talent
+    const url = `https://db.ascension.gg/?spells=410.2&filter=na=${someString}`
     try {
-        await fetch(`https://db.ascension.gg/?spells=410.2&filter=na=${someString}`)
-            .then(function (response) { 
-                if (response.ok){
-                    return response.text() 
-                } else {
-                    throw new Error("No response object from Ascension")
-                }                
-            })
-            .then(function (html) {
-                fs.writeFileSync(`data-${Date.now()}.html`, html, 'utf8')
-                console.log(html)
+        fetchPageHTML(url)
+            .then((html) => {
+                fs.writeFileSync(`./Data/data-${Date.now()}.html`, html, 'utf8')
+                // console.log(html)
                 let doc = new jsdom.JSDOM(html);
-                let linkWeWant = doc.window.document.getElementById("lv-spells") // [0].children[1].children[0].children[1].children[1].getAttribute("href") as string
-                res.send({link: "cool"})
-                // res.send({ link: `https://db.ascension.gg/${linkWeWant}` })
+                let tableContents = doc.window.document.getElementById("lv-spells")?.children[1]?.children[1]?.children
+                let linkWeWant: string = ""
+                someString.replace("%20", " ")
+                if (tableContents !== undefined && tableContents !== null) {
+                    for (let spell of tableContents) {
+                        if (spell?.children[1]?.children[0]?.children[0]?.textContent === someString) {
+                            if (spell?.children[1]?.children[0]?.children[0]?.getAttribute("href")) {
+                                linkWeWant = spell.children[1].children[0].children[0].getAttribute("href") as string
+                            }
+                        } // [0].children[1].children[0].children[1].children[1].getAttribute("href")){
+                    }
+                }
+                // ?.children[0]?.children[1]?.children[0]?.children[0]?.getAttribute("href") // [0].children[1].children[0].children[1].children[1].getAttribute("href") as string
+                if (!linkWeWant || !linkWeWant.length) {
+                    console.log(`Couldn't find that spell: ${someString}`)
+                    res.send({ link: `[${someString}](https://db.ascension.gg/})` })
+                } else {
+                    res.send({ link: `[${someString}](https://db.ascension.gg/${linkWeWant})` })
+                }
                 return
+                // res.send({ link: `https://db.ascension.gg/${linkWeWant}` })
             })
+            .catch((error) => {
+                console.error(error);
+            });
     } catch (e) {
         console.log(`Something fucked up on the server\n${e}`)
         res.send({ link: `https://db.ascension.gg/` })
@@ -48,16 +87,38 @@ app.get("/AscensionS9Talent/:talent", cors(corsOptions), async (req, res) => {
     }
 })
 app.get("/AscensionS9Spell/:skill", cors(corsOptions), async (req, res) => {
-    let someString = req.body.searchThis
+    let someString = req.params.skill
+    const url = `https://db.ascension.gg/?spells=410.1&filter=na=${someString}`
     try {
-        await fetch(`https://db.ascension.gg/?spells=410.1&filter=na=${someString}`)
-            .then(function (response) { return response.text() })
-            .then(function (html) {
+        fetchPageHTML(url)
+            .then((html) => {
+                fs.writeFileSync(`./Data/data-${Date.now()}.html`, html, 'utf8')
+                // console.log(html)
                 let doc = new jsdom.JSDOM(html);
-                let linkWeWant = doc.window.document.getElementsByClassName("listview-mode-default")[0].children[1].children[0].children[1].children[1].getAttribute("href") as string
-                res.send({ link: `https://db.ascension.gg/${linkWeWant}` })
+                let tableContents = doc.window.document.getElementById("lv-spells")?.children[1]?.children[1]?.children
+                let linkWeWant: string = ""
+                someString.replace("%20", " ")
+                if (tableContents !== undefined && tableContents !== null) {
+                    for (let spell of tableContents) {
+                        if (spell?.children[1]?.children[0]?.children[0]?.textContent === someString) {
+                            if (spell?.children[1]?.children[0]?.children[0]?.getAttribute("href")) {
+                                linkWeWant = spell.children[1].children[0].children[0].getAttribute("href") as string
+                            }
+                        } // [0].children[1].children[0].children[1].children[1].getAttribute("href")){
+                    }
+                }
+                // ?.children[0]?.children[1]?.children[0]?.children[0]?.getAttribute("href") // [0].children[1].children[0].children[1].children[1].getAttribute("href") as string
+                if (!linkWeWant || !linkWeWant.length) {
+                    console.log(`Couldn't find that spell: ${someString}`)
+                    res.send({ link: `[${someString}](https://db.ascension.gg/})` })
+                } else {
+                    res.send({ link: `[${someString}](https://db.ascension.gg/${linkWeWant})` })
+                }
                 return
             })
+            .catch((error) => {
+                console.error(error);
+            });
     } catch (e) {
         console.log(`Something fucked up on the server\n${e}`)
         res.send({ link: `https://db.ascension.gg/` })

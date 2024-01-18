@@ -174,10 +174,9 @@ export const getAscensionS9TalentLink = async (someString: string): Promise<stri
     try {
         someString.trim().replace(" ", "%20")
         let someLink: string = await fetch(`http://localhost:3069/AscensionS9Talent/${someString}`)
-            .then(function (response) { return response.text() })
+            .then(function (response) { return response.json() })
             .then(function (json) {
-                console.log(json)
-                return json
+                return json.link
             })
         return someLink
     } catch (e) {
