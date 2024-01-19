@@ -1,0 +1,2 @@
+# Joe Workflow
+This is a plugin for Obsidian Notes for my personal use. No one else is looking at this, so focus is on functionality, not ease of use. If I ever do work on UI elements, it's because I've finished literally everything else I want to do.

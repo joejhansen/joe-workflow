@@ -4,11 +4,12 @@
 	"description": "Personal plugin for Obsidian Notes",
 	"main": "main.js",
 	"scripts": {
-		"dev": "node esbuild.config.mjs",
+		"devPlugin": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
 		"buildServer": "cd Server && tsc server.ts -w",
 		"runServer": "cd Server && nodemon server.js",
-		"devServer": "concurrently 'npm:dev' 'npm:buildServer' 'npm:runServer'",
+		"devServer": "concurrently 'npm:buildServer' 'npm:runServer'",
+		"devAll": "concurrently 'npm:devPlugin' 'npm:buildServer' 'npm:runServer'",
 		"version": "node version-bump.mjs && git add manifest.json versions.json"
 	},
 	"keywords": [],
